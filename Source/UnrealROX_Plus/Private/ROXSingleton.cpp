@@ -2,6 +2,11 @@
 
 #include "ROXSingleton.h"
 
-
+UROXSingleton::UROXSingleton(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer) {
+	eventsHandler = ObjectInitializer.CreateDefaultSubobject<UROXEventHandler>(this, TEXT("EventHandler"));
+	//CALL OUTSIDE
+	//eventsHandler = Cast<UROXTrackerEventHandler>(GEngine->GameSingleton);
+}
 
 

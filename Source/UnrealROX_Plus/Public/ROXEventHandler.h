@@ -6,6 +6,8 @@
 #include "Components/ActorComponent.h"
 #include "ROXEventHandler.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FROXTracker_OnPreFrameGenerated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FROXTracker_OnNextJson);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UNREALROX_PLUS_API UROXEventHandler : public UActorComponent
@@ -24,6 +26,10 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-		
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "ROXTracker Events")
+	FROXTracker_OnPreFrameGenerated OnPreFrameGenerated;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = "ROXTracker Events")
+	FROXTracker_OnNextJson OnNextJson;
 	
 };

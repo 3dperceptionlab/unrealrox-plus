@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "4.18",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "unrealrox_plus_maker",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "UnrealROX_Plus",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"CoreUObject",
+				"Engine"
+			]
+		}
+	]
+}

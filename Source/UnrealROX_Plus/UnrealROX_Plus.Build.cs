@@ -15,7 +15,7 @@ public class UnrealROX_Plus : ModuleRules
 		bEnforceIWYU = true;
 
 		//Engine dependencies
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Sockets", "Networking" });
 
 		//The path for the header files
 		PublicIncludePaths.AddRange(new string[] { "UnrealROX_Plus/Public" });

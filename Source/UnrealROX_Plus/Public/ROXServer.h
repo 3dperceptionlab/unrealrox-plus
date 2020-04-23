@@ -37,20 +37,17 @@ protected:
 	void SendReponse(FString reponse);
 
 	FSocket* ListenerSocket, *ConnectionSocket;
-	// Server's ip
-	UPROPERTY(EditAnywhere)
-		FString Ip = "127.0.0.1";
 
 	// Server's port
 	UPROPERTY(EditAnywhere)
-		int Port = 8890;
+		int Port = 8890 ;
 
 	// Create list of assets in the specifiy path
 	void CreateAssetsList();
 	
 	// Assets' route
 	UPROPERTY(EditAnywhere)
-		FString AssetsPath = "/ServerPlugin";
+		FString AssetsPath = "/Game";
 
 	// Functions of list's comands
 	void ObjectList(TArray<FString>& message);
@@ -68,7 +65,7 @@ protected:
 	TArray<FName> SocketNames;
 	TMap<FString, FAssetData> LAssets;
 
-	// Other commands
+	// Transformation's commands
 	void Move(TArray<FString>& message);
 	void MoveSocket(TArray<FString>& message);
 	void Rotate(TArray<FString>& message);
@@ -85,13 +82,11 @@ protected:
 	void SpawnActor(TArray<FString>& message);
 	void SpawnCamera(TArray<FString>& messsage);
 	void CameraLookAt(TArray<FString>& messsage);
-
 	void ChangeTexture(TArray<FString>& message);
 	void ChangeAssetsPath(TArray<FString>& message);
 
-
+	// UnrealROX's commands
 	void GetBoundingBox(TArray<FString>& message);
-	void Integrate(FVector* pointer, FVector& min, FVector& max);
 	void ToggleScenePhysics(TArray<FString>& message);
 	void ScenePhysicsEnabled(TArray<FString>& message);
 	void SetCameraStereo(TArray<FString>& message);
@@ -106,6 +101,7 @@ protected:
 
 	AActor* SelObj;
 	void FindActorInList(FName n);
+	void Integrate(FVector* pointer, FVector& min, FVector& max);
 	bool Physics = true;
 
 

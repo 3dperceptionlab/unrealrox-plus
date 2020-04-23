@@ -16,8 +16,7 @@
 #include "UObject/ObjectMacros.h"
 #include "Interfaces/IPv4/IPv4Endpoint.h"
 #include "Common/TcpSocketBuilder.h"
-
-
+#include "ROXCamera.h"
 
 AROXServer::AROXServer()
 {
@@ -37,27 +36,27 @@ AROXServer::AROXServer()
 		{"move_socket",						&AROXServer::MoveSocket,				5}, // nameskeletal, namesocket, x,y,z
 		{"rotate",							&AROXServer::Rotate,					4}, // name, pitch, yaw, roll
 		{"rotate_socket",					&AROXServer::RotateSocket,				5}, // nameskeletal, namesocket, pitch, yaw, roll
-		{"scale",							&AROXServer::Scale,					4}, // name, x,y,z
+		{"scale",							&AROXServer::Scale,						4}, // name, x,y,z
 		{"spawn_actor",						&AROXServer::SpawnActor,				5}, // actor_name, asset_name, x,y,z
 		{"spawn_camera",					&AROXServer::SpawnCamera,				4}, // camera_name, x,y,z
 		{"camera_look_at",					&AROXServer::CameraLookAt,				2}, // camera_name actor_name -- camera_name x y z
 		{"set_asset_path",					&AROXServer::ChangeAssetsPath,			1},	// asset_path
-		{"change_texture",					&AROXServer::ChangeTexture,			2}, // nameactor, nametexture
+		{"change_texture",					&AROXServer::ChangeTexture,				2}, // nameactor, nametexture
 		{"get_location",					&AROXServer::GetLocation,				1}, // nameactor
 		{"get_rotation",					&AROXServer::GetRotation,				1}, // nameactor
 		{"get_scale",						&AROXServer::GetScale,					1}, // nameactor
-		{"get_socket_location",				&AROXServer::GetSocketLocation,		2}, // nameskeletal socket
-		{"get_socket_rotation",				&AROXServer::GetSocketRotation,		2}, // nameskeletal socket
+		{"get_socket_location",				&AROXServer::GetSocketLocation,			2}, // nameskeletal socket
+		{"get_socket_rotation",				&AROXServer::GetSocketRotation,			2}, // nameskeletal socket
 		{"get_3d_bounding_box",				&AROXServer::GetBoundingBox,			1}, // name
 		{"toggle_scene_physics",			&AROXServer::ToggleScenePhysics,		1},
 		{"is_scene_physics_enabled",		&AROXServer::ScenePhysicsEnabled,		0},
 		{"set_camera_stereo",				&AROXServer::SetCameraStereo,			3},
-		{"is_camera_stero",					&AROXServer::IsCameraStereo,			1},
-		{"set_output_frames_resolution",	&AROXServer::SetOutFrameResolution,	2},
+		{"is_camera_stereo",				&AROXServer::IsCameraStereo,			1},
+		{"set_output_frames_resolution",	&AROXServer::SetOutFrameResolution,		2},
 		{"set_output_frames_path",			&AROXServer::SetOutFramePath,			1},
 		{"get_rgb",							&AROXServer::GetRGB,					1},
 		{"get_depth",						&AROXServer::GetDepth,					1},
-		{"get_normal",						&AROXServer::GetNormal,				1},
+		{"get_normal",						&AROXServer::GetNormal,					1},
 		{"get_instance_mask",				&AROXServer::GetInstanceMask,			1},
 	};
 	Mapping.Append(map,ARRAY_COUNT(map));
@@ -188,25 +187,9 @@ void AROXServer::UpdateTransform(float DeltaTime)
 FSocket* AROXServer::CreateListener()
 {
 	FString name = "ServerSocket";
-
-	// IP from string to number
-	TArray<FString> ip_array_s;
-	TArray<uint8> ip_array_n;
-	Ip.ParseIntoArray(ip_array_s, TEXT("."), true);
-
-	// Check if there are 4 numbers
-	if (ip_array_s.Num() != 4)
-		return nullptr;
-
-	for (int32 i = 0; i < 4; ++i)
-	{
-		ip_array_n.Add(FCString::Atoi(*ip_array_s[i]));
-	}
-
 	// Create socket
-	FIPv4Endpoint end_point(FIPv4Address(ip_array_n[0], ip_array_n[1], ip_array_n[2], ip_array_n[3]), Port);
-	FSocket* new_socket = FTcpSocketBuilder(*name).AsReusable().BoundToEndpoint(end_point).Listening(1);
-
+	FSocket* new_socket = FTcpSocketBuilder(*name).AsReusable().BoundToAddress(FIPv4Address::Any).BoundToPort(Port).Listening(1);
+	
 	return new_socket;
 }
 
@@ -268,7 +251,6 @@ void AROXServer::ListenConnection()
 	{
 		SendReponse("command wasn't found");
 	}
-
 }
 
 void AROXServer::SendReponse(FString reponse)
@@ -428,7 +410,7 @@ void AROXServer::GetScale(TArray<FString>& message)
 
 void AROXServer::CreateAssetsList()
 {
-	/*FAssetRegistryModule& asset_rm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
+	FAssetRegistryModule& asset_rm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
 	IAssetRegistry& asset_r = asset_rm.Get();
 
 	// Scan specific path
@@ -444,7 +426,7 @@ void AROXServer::CreateAssetsList()
 	for (FAssetData asset : assets_list)
 	{
 		LAssets.Emplace(asset.AssetName.ToString(), asset);
-	}*/
+	}
 }
 
 void AROXServer::ChangeAssetsPath(TArray<FString>& message)
@@ -858,44 +840,141 @@ void AROXServer::SetCameraStereo(TArray<FString>& message)
 {
 	if (LCamera.Contains(FName(*message[1])))
 	{
-
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(LCamera[*message[1]]);
+		if (rox_camera)
+		{
+			if (message[2] == "false")
+			{
+				rox_camera->isStereoCamera = false;
+				rox_camera->SceneCapture_ConfigComponents();
+			}
+			else
+			{
+				rox_camera->isStereoCamera = true;
+				rox_camera->StereoCameraBaseline = FCString::Atof(*message[3]);
+				rox_camera->SceneCapture_ConfigComponents();
+			}
+		}
 	}
+	else
+		SendReponse("Camera wasn't found");
 }
 
 void AROXServer::IsCameraStereo(TArray<FString>& message)
 {
 	if (LCamera.Contains(FName(*message[1])))
 	{
-
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(LCamera[*message[1]]);
+		if (rox_camera)
+		{
+			if (rox_camera->isStereoCamera)
+				SendReponse("true");
+			else
+				SendReponse("false");
+		}
 	}
+	else
+		SendReponse("Camera wasn't found");
 }
 
 void AROXServer::SetOutFrameResolution(TArray<FString>& message)
 {
-
+	for (auto act : LCamera)
+	{
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(act.Value);
+		if (rox_camera)
+		{
+			rox_camera->generated_images_height = FCString::Atoi(*message[2]);
+			rox_camera->generated_images_width = FCString::Atoi(*message[1]);
+			rox_camera->SceneCapture_ConfigComponents();
+		}
+	}
 }
 
 void AROXServer::SetOutFramePath(TArray<FString>& message)
 {
-
+	for (auto act : LCamera)
+	{
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(act.Value);
+		if (rox_camera)
+		{
+			rox_camera->screenshots_folder = message[1];
+		}
+	}
 }
 
 void AROXServer::GetRGB(TArray<FString>& message)
 {
-
+	if (LCamera.Contains(FName(*message[1])))
+	{
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(LCamera[*message[1]]);
+		if (rox_camera)
+		{
+			if (message.Num() == 3)
+				rox_camera->SaveRGBImage(message[2]);
+			else
+				rox_camera->SaveRGBImage();
+		}
+		else
+			SendReponse("Camera isn't a ROXCamera");
+	}
+	else
+		SendReponse("Camera wasn't found");
 }
 
 void AROXServer::GetDepth(TArray<FString>& message)
 {
-
+	if (LCamera.Contains(FName(*message[1])))
+	{
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(LCamera[*message[1]]);
+		if (rox_camera)
+		{
+			if (message.Num() == 3)
+				rox_camera->SaveDepthImage(message[2]);
+			else
+				rox_camera->SaveDepthImage();
+		}
+		else
+			SendReponse("Camera isn't a ROXCamera");
+	}
+	else
+		SendReponse("Camera wasn't found");
 }
 
 void AROXServer::GetNormal(TArray<FString>& message)
 {
-
+	if (LCamera.Contains(FName(*message[1])))
+	{
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(LCamera[*message[1]]);
+		if (rox_camera)
+		{
+			if (message.Num() == 3)
+				rox_camera->SaveNormalImage(message[2]);
+			else
+				rox_camera->SaveNormalImage();
+		}
+		else
+			SendReponse("Camera isn't a ROXCamera");
+	}
+	else
+		SendReponse("Camera wasn't found");
 }
 
 void AROXServer::GetInstanceMask(TArray<FString>& message)
 {
-
+	if (LCamera.Contains(FName(*message[1])))
+	{
+		AROXCamera* rox_camera = dynamic_cast<AROXCamera*>(LCamera[*message[1]]);
+		if (rox_camera)
+		{
+			if (message.Num() == 3)
+				rox_camera->SaveMaskImage(message[2]);
+			else
+				rox_camera->SaveMaskImage();
+		}
+		else
+			SendReponse("Camera isn't a ROXCamera");
+	}
+	else
+		SendReponse("Camera wasn't found");
 }

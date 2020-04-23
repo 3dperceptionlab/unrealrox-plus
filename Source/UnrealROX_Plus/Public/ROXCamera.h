@@ -40,7 +40,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = ROX_Config)
 	int generated_images_height;
 	
-
 	// ROXGroundTruth
 	/* Directory where the folder for storing generated images from rebuilt sequences will be created */
 	UPROPERTY(EditAnywhere, Category = ROX_GroundTruth)
@@ -137,4 +136,6 @@ private:
 	void SaveNormalImage(FString Filename = "");
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
 	void SaveMaskImage(FString Filename = "");
+
+	friend class AROXServer;
 };

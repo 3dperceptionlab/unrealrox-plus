@@ -63,8 +63,11 @@ public:
 	/* If checked, Object Mask images (PNG RGB 8bit) will be generated for each frame of rebuilt sequences */
 	UPROPERTY(EditAnywhere, Category = ROX_GroundTruth)
 	bool generate_object_mask;
-	/* If checked, a TXT file with depth in cm for each pixel will be printed (WARNING: large size ~2MB per file) */
+	/* If checked, Albedo images (PNG RGB 8bit) will be generated for each frame of rebuilt sequences */
 	UPROPERTY(EditAnywhere, Category = ROX_GroundTruth)
+	bool generate_albedo;
+	/* If checked, a TXT file with depth in cm for each pixel will be printed (WARNING: large size ~2MB per file) */
+	UPROPERTY(EditAnywhere, Category = ROX_GroundTruth, AdvancedDisplay)
 	bool generate_depth_txt_cm;
 
 
@@ -84,6 +87,8 @@ private:
 	USceneCaptureComponent2D* SceneCapture_Normal;
 	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USceneCaptureComponent2D* SceneCapture_Mask;
+	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	USceneCaptureComponent2D* SceneCapture_Albedo;
 
 	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USceneCaptureComponent2D* SceneCapture_RGB_L;
@@ -93,6 +98,8 @@ private:
 	USceneCaptureComponent2D* SceneCapture_Normal_L;
 	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USceneCaptureComponent2D* SceneCapture_Mask_L;
+	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	USceneCaptureComponent2D* SceneCapture_Albedo_L;
 
 	UMaterial* NormalMat;
 
@@ -136,6 +143,8 @@ private:
 	void SaveNormalImage(FString Filename = "");
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
 	void SaveMaskImage(FString Filename = "");
+	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
+	void SaveAlbedoImage(FString Filename = "");
 
 	friend class AROXServer;
 };

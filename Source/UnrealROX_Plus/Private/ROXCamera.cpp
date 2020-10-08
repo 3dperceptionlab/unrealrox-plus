@@ -80,37 +80,20 @@ void AROXCamera::InitComponents()
 	Stereo_L->SetupAttachment(GetRootComponent());
 	Stereo_L->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 
-	SceneCapture_RGB = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_RGB");
-	SceneCapture_RGB->SetupAttachment(Stereo_R);
-	SceneCapture_RGB->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Depth = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Depth");
-	SceneCapture_Depth->SetupAttachment(Stereo_R);
-	SceneCapture_Depth->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Normal = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Normal");
-	SceneCapture_Normal->SetupAttachment(Stereo_R);
-	SceneCapture_Normal->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Mask = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Mask");
-	SceneCapture_Mask->SetupAttachment(Stereo_R);
-	SceneCapture_Mask->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Albedo = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Albedo");
-	SceneCapture_Albedo->SetupAttachment(Stereo_R);
-	SceneCapture_Albedo->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+	for (EROXViewMode vm : EROXViewModeList)
+	{
+		FName sc_name = FName(*("SceneCapture_" + FROXTypes::GetViewmodeString(vm)));
+		USceneCaptureComponent2D* SceneCapture_aux = CreateDefaultSubobject<USceneCaptureComponent2D>(sc_name);
+		SceneCapture_aux->SetupAttachment(Stereo_R);
+		SceneCapture_aux->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		SceneCapture_VMs.Add(SceneCapture_aux);
 
-	SceneCapture_RGB_L = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_RGB_L");
-	SceneCapture_RGB_L->SetupAttachment(Stereo_L);
-	SceneCapture_RGB_L->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Depth_L = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Depth_L");
-	SceneCapture_Depth_L->SetupAttachment(Stereo_L);
-	SceneCapture_Depth_L->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Normal_L = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Normal_L");
-	SceneCapture_Normal_L->SetupAttachment(Stereo_L);
-	SceneCapture_Normal_L->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Mask_L = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Mask_L");
-	SceneCapture_Mask_L->SetupAttachment(Stereo_L);
-	SceneCapture_Mask_L->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	SceneCapture_Albedo_L = CreateDefaultSubobject<USceneCaptureComponent2D>("SceneCapture_Albedo_L");
-	SceneCapture_Albedo_L->SetupAttachment(Stereo_L);
-	SceneCapture_Albedo_L->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		FName sc_name_L = FName(*("SceneCapture_" + FROXTypes::GetViewmodeString(vm) + "_L"));
+		SceneCapture_aux = CreateDefaultSubobject<USceneCaptureComponent2D>(sc_name_L);
+		SceneCapture_aux->SetupAttachment(Stereo_L);
+		SceneCapture_aux->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		SceneCapture_VMs_L.Add(SceneCapture_aux);
+	}
 }
 
 
@@ -118,19 +101,17 @@ void AROXCamera::SceneCapture_ConfigComponents()
 {
 	if (GetGroundTruth)
 	{
-		SceneCapture_ConfigComp(SceneCapture_RGB, EROXViewMode::RVM_RGB, TEXT("SceneCapture_RGB"));
-		SceneCapture_ConfigComp(SceneCapture_Depth, EROXViewMode::RVM_Depth, TEXT("SceneCapture_Depth"));
-		SceneCapture_ConfigComp(SceneCapture_Normal, EROXViewMode::RVM_Normal, TEXT("SceneCapture_Normal"));
-		SceneCapture_ConfigComp(SceneCapture_Mask, EROXViewMode::RVM_Mask, TEXT("SceneCapture_Mask"));
-		SceneCapture_ConfigComp(SceneCapture_Albedo, EROXViewMode::RVM_Mask, TEXT("SceneCapture_Albedo"));
+		for (int i = 0; i < EROXViewModeList.Num(); ++i)
+		{
+			SceneCapture_ConfigComp(SceneCapture_VMs[i], EROXViewModeList[i], SceneCapture_VMs[i]->GetFName());
+		}
 
 		if (isStereoCamera)
 		{
-			SceneCapture_ConfigComp(SceneCapture_RGB_L, EROXViewMode::RVM_RGB, TEXT("SceneCapture_RGB_L"));
-			SceneCapture_ConfigComp(SceneCapture_Depth_L, EROXViewMode::RVM_Depth, TEXT("SceneCapture_Depth_L"));
-			SceneCapture_ConfigComp(SceneCapture_Normal_L, EROXViewMode::RVM_Normal, TEXT("SceneCapture_Normal_L"));
-			SceneCapture_ConfigComp(SceneCapture_Mask_L, EROXViewMode::RVM_Mask, TEXT("SceneCapture_Mask_L"));
-			SceneCapture_ConfigComp(SceneCapture_Albedo_L, EROXViewMode::RVM_Albedo, TEXT("SceneCapture_Albedo_L"));
+			for (int i = 0; i < EROXViewModeList.Num(); ++i)
+			{
+				SceneCapture_ConfigComp(SceneCapture_VMs_L[i], EROXViewModeList[i], SceneCapture_VMs_L[i]->GetFName());
+			}
 			SceneCapture_ConfigStereo();
 		}
 		else
@@ -191,19 +172,19 @@ void AROXCamera::SceneCapture_ConfigComp(USceneCaptureComponent2D* SceneCaptureC
 
 void AROXCamera::SceneCapture_DisableComponents()
 {
-	SceneCapture_RGB->Deactivate();
-	SceneCapture_Depth->Deactivate();
-	SceneCapture_Normal->Deactivate();
-	SceneCapture_Mask->Deactivate();
+	for (USceneCaptureComponent2D* sc : SceneCapture_VMs)
+	{
+		sc->Deactivate();
+	}
 	SceneCapture_DisableStereoComponents();
 }
 
 void AROXCamera::SceneCapture_DisableStereoComponents()
 {
-	SceneCapture_RGB_L->Deactivate();
-	SceneCapture_Depth_L->Deactivate();
-	SceneCapture_Normal_L->Deactivate();
-	SceneCapture_Mask_L->Deactivate();
+	for (USceneCaptureComponent2D* sc : SceneCapture_VMs_L)
+	{
+		sc->Deactivate();
+	}
 }
 
 
@@ -332,25 +313,30 @@ void AROXCamera::SaveRTImageStereo(USceneCaptureComponent2D* SceneCaptureComp_R,
 
 void AROXCamera::SaveRGBImage(FString Filename)
 {
-	SaveRTImageStereo(SceneCapture_RGB, SceneCapture_RGB_L, EROXViewMode::RVM_RGB, Filename);
-}
-
-void AROXCamera::SaveDepthImage(FString Filename)
-{
-	SaveRTImageStereo(SceneCapture_Depth, SceneCapture_Depth_L, EROXViewMode::RVM_Depth, Filename);
+	uint8 i = (uint8)EROXViewMode::RVM_RGB;
+	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_RGB, Filename);
 }
 
 void AROXCamera::SaveNormalImage(FString Filename)
 {
-	SaveRTImageStereo(SceneCapture_Normal, SceneCapture_Normal_L, EROXViewMode::RVM_Normal, Filename);
+	uint8 i = (uint8)EROXViewMode::RVM_Normal;
+	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Normal, Filename);
 }
 
-void AROXCamera::SaveMaskImage(FString Filename)
+void AROXCamera::SaveDepthImage(FString Filename)
 {
-	SaveRTImageStereo(SceneCapture_Mask, SceneCapture_Mask_L, EROXViewMode::RVM_Mask, Filename);
+	uint8 i = (uint8)EROXViewMode::RVM_Depth;
+	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Depth, Filename);
 }
 
 void AROXCamera::SaveAlbedoImage(FString Filename)
 {
-	SaveRTImageStereo(SceneCapture_Albedo, SceneCapture_Albedo_L, EROXViewMode::RVM_Albedo, Filename);
+	uint8 i = (uint8)EROXViewMode::RVM_Albedo;
+	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Albedo, Filename);
+}
+
+void AROXCamera::SaveMaskImage(FString Filename)
+{
+	uint8 i = (uint8)EROXViewMode::RVM_Mask;
+	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Mask, Filename);
 }

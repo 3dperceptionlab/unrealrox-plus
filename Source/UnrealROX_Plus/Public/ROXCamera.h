@@ -80,29 +80,11 @@ private:
 
 	/* SceneCapture structures for each type of ground truth image to obtain */
 	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_RGB;
+	TArray<USceneCaptureComponent2D*> SceneCapture_VMs;
 	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Depth;
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Normal;
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Mask;
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Albedo;
-
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_RGB_L;
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Depth_L;
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Normal_L;
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Mask_L;
-	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	USceneCaptureComponent2D* SceneCapture_Albedo_L;
+	TArray<USceneCaptureComponent2D*> SceneCapture_VMs_L;
 
 	UMaterial* NormalMat;
-
 
 
 	/**************************************

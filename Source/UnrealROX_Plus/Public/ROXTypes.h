@@ -15,14 +15,18 @@ enum class EROXViewMode : uint8
 	RVM_RGB			UMETA(DisplayName = "RGB"),
 	RVM_Normal		UMETA(DisplayName = "Normal"),
 	RVM_Depth		UMETA(DisplayName = "Depth"),
+	RVM_Albedo		UMETA(DisplayName = "Albedo"),
 	RVM_Mask		UMETA(DisplayName = "Mask"),
-	RVM_Albedo		UMETA(DisplayName = "Albedo")
+	First = RVM_RGB,
+	Last = RVM_Mask
 };
-// Contains the types of images that will be generated for a concrete execution.
-static TArray<EROXViewMode> EROXViewModeList;
-// First and last elements from EROXViewModeList (updated in runtime)
-static EROXViewMode EROXViewMode_First = EROXViewMode::RVM_RGB;
-static EROXViewMode EROXViewMode_Last = EROXViewMode::RVM_Albedo;
+// Lists all the viewmodes
+static TArray<EROXViewMode> EROXViewModeList =	{ EROXViewMode::RVM_RGB
+												, EROXViewMode::RVM_Normal
+												, EROXViewMode::RVM_Depth
+												, EROXViewMode::RVM_Albedo
+												, EROXViewMode::RVM_Mask
+												};
 
 class FROXTypes
 {

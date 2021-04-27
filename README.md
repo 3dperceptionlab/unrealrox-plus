@@ -13,7 +13,7 @@
 
 
 ## Documentation
-* [Python API](https://github.com/3dperceptionlab/unrealrox-plus/tree/master/docs/python-api)
+* [Python API](docs/python-api)
 
 ## How to use   
 

@@ -10,13 +10,17 @@
 </div>
  
 ## Description   
+UnrealROX+ is a plugin for Unreal Engine 4 that allows to easily acquire a wide variety of data from a virtual 3D environment. This data ranges from image data (RGB, depth maps, normal maps, albedo or segmentation masks) to 6D pose of objects, cameras or skeletons. Due to the high realism that UE4 achieves when rendering 3D graphics (including real-time raytracing), data generated through this tool can be used for training deep learning models. This synthetically generated data is extremely useful for these models due to its perfect precission across data, such as, pixel-perfect segmentations masks compared with its correspondent RGB image. This kind of annotations are tedious to label in real-world images, but they can be automatically obtained from graphic engines like UE4.
 
+This tool is an improved version of [UnrealROX](https://github.com/3dperceptionlab/unrealrox), which was the original tool developed to generate [the RobotriX dataset](https://github.com/3dperceptionlab/therobotrix). In UnrealROX+ we decoupled the data-acquire subsystem, which was very tied to the workflow for genertaing RobotriX. The result is a much more flexible and easy-to-use tool that enables reasearchers to generate data for a wider amount of applications. More details can be read in the publications linked below.
+
+## How to use   
+Download the plugin for your UE4 version from the releases page. Add it to Unreal like any other plugin.
+More details very soon...
 
 ## Documentation
 * [Python API](docs/python-api)
-
-## How to use   
-
+* More documentation soon...
 
 ## Publication
 <div align="center">
@@ -33,11 +37,24 @@
 If you use UnrealROX+, please cite:
 ```
 @article{Martinez2021unrealrox,
-  author    = {Pablo Martinez{-}Gonzalez and Sergiu Oprea and John A. Castro{-}Vargas and Sergio Orts{-}Escolano and Jose Garcia{-}Rodriguez} and Markus Vincze},
-  title     = {{UnrealROX+:} An Improved Tool for Acquiring Synthetic Data from Virtual 3D Environments},
+  author    = {Pablo Martinez{-}Gonzalez and Sergiu Oprea and John A. Castro{-}Vargas and Alberto Garcia{-}Garcia and Sergio Orts{-}Escolano and Jose Garcia{-}Rodriguez and Markus Vincze},
+  title     = {{UnrealROX+}: An Improved Tool for Acquiring Synthetic Data from Virtual 3D Environments},
   journal   = {CoRR},
   volume    = {abs/2104.11776},
   year      = {2021}
+}
+```
+
+Consider also citing the original version of [UnrealROX](https://github.com/3dperceptionlab/unrealrox), where the base system is detailed:
+```
+@article{Martinez2019unrealrox,
+  author    = {Pablo Martinez{-}Gonzalez and Sergiu Oprea and Alberto Garcia{-}Garcia and Alvaro Jover{-}Alvarez and Sergio Orts{-}Escolano and Jose Garcia{-}Rodriguez},
+  title     = {{UnrealROX}: An eXtremely Photorealistic Virtual Reality Environment for Robotics Simulations and Synthetic Data Generation},
+  journal   = {Virtual Reality},
+  issn      = "1434-9957",
+  doi       = "10.1007/s10055-019-00399-5",
+  url       = "https://doi.org/10.1007/s10055-019-00399-5",
+  year      = {2019}
 }
 ```
 

@@ -31,7 +31,7 @@
 If you use UnrealROX+, please cite:
 ```
 @article{Martinez2021unrealrox,
-  author    = {Pablo Martinez{-}Gonzalez and Sergiu Oprea and John A. Castro{-}Vargas and Sergio Orts{-}Escolano and Jose Garcia Rodriguez} and Markus Vincze},
+  author    = {Pablo Martinez{-}Gonzalez and Sergiu Oprea and John A. Castro{-}Vargas and Sergio Orts{-}Escolano and Jose Garcia{-}Rodriguez} and Markus Vincze},
   title     = {{UnrealROX+:} An Improved Tool for Acquiring Synthetic Data from Virtual 3D Environments},
   journal   = {CoRR},
   volume    = {abs/2104.11776},

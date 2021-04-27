@@ -1,6 +1,3 @@
-# unrealrox-plus
-Upgraded version of UnrealROX, as plugin
-
 <div align="center">    
  
 # UnrealROX+

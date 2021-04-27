@@ -1,7 +1,6 @@
 <div align="center">    
  
 # UnrealROX+
-## An Improved Tool for Acquiring Synthetic Data from Virtual 3D Environments
 
 [![Paper](http://img.shields.io/badge/preprint-arxiv.2104.11776-B31B1B.svg)](https://arxiv.org/abs/2104.11776)
 [![Conference](https://img.shields.io/badge/IJCNN-2021-blue.svg)](https://arxiv.org/abs/2104.11776)

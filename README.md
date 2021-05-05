@@ -27,7 +27,7 @@ More details very soon...
 
  ### [**UnrealROX+: An Improved Tool for Acquiring Synthetic Data from Virtual 3D Environments**](https://arxiv.org/abs/2104.11776)
  
- International Joint Conference on Neural Networks (IJCNN) - 2021
+ Submitted to International Joint Conference on Neural Networks (IJCNN) - 2021
  
  *Pablo Martínez-González, Sergiu Oprea, John A. Castro-Vargas, Alberto García-García, Sergio Orts-Escolano, José García-Rodríguez, and Markus Vincze*
 
@@ -36,9 +36,9 @@ More details very soon...
 ### How to cite this work?
 If you use UnrealROX+, please cite:
 ```
-@article{Martinez2021unrealrox,
+@article{Martinez2021unrealroxplus,
   author    = {Pablo Martinez{-}Gonzalez and Sergiu Oprea and John A. Castro{-}Vargas and Alberto Garcia{-}Garcia and Sergio Orts{-}Escolano and Jose Garcia{-}Rodriguez and Markus Vincze},
-  title     = {{UnrealROX+}: An Improved Tool for Acquiring Synthetic Data from Virtual 3D Environments},
+  title     = {UnrealROX+: An Improved Tool for Acquiring Synthetic Data from Virtual 3D Environments},
   journal   = {CoRR},
   volume    = {abs/2104.11776},
   year      = {2021}
@@ -49,7 +49,7 @@ Consider also citing the original version of [UnrealROX](https://github.com/3dpe
 ```
 @article{Martinez2019unrealrox,
   author    = {Pablo Martinez{-}Gonzalez and Sergiu Oprea and Alberto Garcia{-}Garcia and Alvaro Jover{-}Alvarez and Sergio Orts{-}Escolano and Jose Garcia{-}Rodriguez},
-  title     = {{UnrealROX}: An eXtremely Photorealistic Virtual Reality Environment for Robotics Simulations and Synthetic Data Generation},
+  title     = {UnrealROX: An eXtremely Photorealistic Virtual Reality Environment for Robotics Simulations and Synthetic Data Generation},
   journal   = {Virtual Reality},
   issn      = "1434-9957",
   doi       = "10.1007/s10055-019-00399-5",

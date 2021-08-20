@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Camera/CameraActor.h"
+#include "Engine/World.h"
 #include "Engine/SceneCapture2D.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "ROXTypes.h"
+#include "ROXSceneManager.h"
 #include "ROXCamera.generated.h"
 
 /**
@@ -19,6 +21,13 @@ class UNREALROX_PLUS_API AROXCamera : public ACameraActor
 
 public:
 	// ROXConfig
+
+	/* Scene Manager reference. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ROX_Config)
+	AROXSceneManager* SceneManager;
+
+	bool generate_masks_changing_materials;
+
 	/* Disable for not generating the structures to retrieve ground truth. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ROX_Config)
 	bool GetGroundTruth;
@@ -70,6 +79,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = ROX_GroundTruth, AdvancedDisplay)
 	bool generate_depth_txt_cm;
 
+	/* Seconds to wait since materials have been changed for all actors (0.2 is enough).*/
+	UPROPERTY(EditAnywhere, Category = ROX_GroundTruth, AdvancedDisplay)
+	float delay_change_materials;
+
 
 	UPROPERTY(Category = GroundTruth, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USceneComponent* Stereo_R;
@@ -85,7 +98,9 @@ private:
 	TArray<USceneCaptureComponent2D*> SceneCapture_VMs_L;
 
 	UMaterial* NormalMat;
+	UMaterial* MaskMat;
 
+	TArray<EROXViewMode> VMActiveList;
 
 	/**************************************
 	************* FUNCTIONS ***************
@@ -104,7 +119,9 @@ protected:
 	virtual void BeginDestroy() override;
 
 private:
+	void InitSceneManager();
 	void InitComponents();
+	void InitVMActiveList();
 
 	void SceneCapture_ConfigComponents();
 	void SceneCapture_ConfigComp(USceneCaptureComponent2D* SceneCaptureComp, EROXViewMode vm, FName CompName);
@@ -113,9 +130,10 @@ private:
 	void SceneCapture_ConfigStereo();
 	void SceneCapture_ConfigStereoPair(USceneCaptureComponent2D* SCComp_R, USceneCaptureComponent2D* SCComp_L);
 
-	void SaveRTImageStereo(USceneCaptureComponent2D* SceneCaptureComp_R, USceneCaptureComponent2D* SceneCaptureComp_L, const EROXViewMode viewmode, FString Filename);
+	void SaveImageData(USceneCaptureComponent2D* SceneCaptureComp_R, USceneCaptureComponent2D* SceneCaptureComp_L, const EROXViewMode viewmode, FString Filename);
 	void SaveRTImage(USceneCaptureComponent2D* SceneCaptureComp, const EROXViewMode viewmode, FString Filename);
 	void SaveRTDepthImage(USceneCaptureComponent2D* SceneCaptureComp, FString Filename);
+	void SaveAnyImage(EROXViewMode vm, FString Filename);
 
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
 	void SaveRGBImage(FString Filename = "");
@@ -127,6 +145,8 @@ private:
 	void SaveMaskImage(FString Filename = "");
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
 	void SaveAlbedoImage(FString Filename = "");
+	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
+	void SaveGTImages(bool rgb, bool depth, bool mask, bool normal, bool albedo, FString Filename = "");
 
 	friend class AROXServer;
 };

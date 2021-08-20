@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Camera/CameraActor.h"
+#include "Components/MeshComponent.h"
 #include "ROXTypes.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealROX, Log, All);

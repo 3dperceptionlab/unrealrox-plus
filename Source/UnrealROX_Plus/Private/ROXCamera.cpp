@@ -3,13 +3,17 @@
 #include "ROXCamera.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "UObject/ConstructorHelpers.h"
+#include "UObject/UObjectIterator.h"
 #include "CommandLine.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "ImageUtils.h"
 #include "Modules/ModuleManager.h"
+#include "TimerManager.h"
 #include "ROXTaskUtils.h"
 #include "ROXLib.h"
+
+//bool AROXCamera::SceneManagerReady = false;
 
 AROXCamera::AROXCamera() :
 	GetGroundTruth(true),
@@ -21,6 +25,8 @@ AROXCamera::AROXCamera() :
 	generate_depth(true),
 	generate_object_mask(true),
 	generate_depth_txt_cm(false),
+	generate_masks_changing_materials(false),
+	delay_change_materials(0.2),
 	screenshots_save_directory(),
 	screenshots_folder("GeneratedSequences"),
 	generated_images_width(1920),
@@ -40,6 +46,13 @@ AROXCamera::AROXCamera() :
 	if (matNormal.Succeeded())
 	{
 		NormalMat = (UMaterial*)matNormal.Object;
+	}
+
+	MaskMat = nullptr;
+	static ConstructorHelpers::FObjectFinder<UMaterial> matMask(TEXT("/Game/ROX/ViewModeMats/PPM_SegMask.PPM_SegMask"));
+	if (matMask.Succeeded())
+	{
+		MaskMat = (UMaterial*)matMask.Object;
 	}
 
 	// Init SceneCapture structures
@@ -62,12 +75,47 @@ void AROXCamera::BeginPlay()
 	}
 
 	// Configure SceneCapture structures
+	InitVMActiveList();
+	InitSceneManager();
 	SceneCapture_ConfigComponents();
 }
 
 void AROXCamera::BeginDestroy()
 {
 	Super::BeginDestroy();
+}
+
+void AROXCamera::InitVMActiveList()
+{
+	if (generate_rgb) VMActiveList.Add(EROXViewMode::RVM_RGB);
+	if (generate_albedo) VMActiveList.Add(EROXViewMode::RVM_Albedo);
+	if (generate_depth) VMActiveList.Add(EROXViewMode::RVM_Depth);
+	if (generate_normal) VMActiveList.Add(EROXViewMode::RVM_Normal);
+	if (generate_object_mask) VMActiveList.Add(EROXViewMode::RVM_Mask);
+}
+
+void AROXCamera::InitSceneManager()
+{
+	/*for (TObjectIterator<AROXSceneManager> Itr; Itr && SceneManager == NULL; ++Itr)
+	{
+		SceneManager = *Itr;
+		generate_masks_changing_materials = SceneManager->generate_masks_changing_materials;
+		if (generate_masks_changing_materials)
+		{
+			FString status_msg = " " + ((*Itr)->GetFullName()) + " " + this->GetFullName();
+			UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *status_msg);
+		}
+	}*/
+
+	if (SceneManager == NULL)
+	{
+		FString status_msg = "No ROXSceneManager in the scene.";
+		UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *status_msg);
+	}
+	else
+	{
+		generate_masks_changing_materials = SceneManager->generate_masks_changing_materials;
+	}
 }
 
 
@@ -150,9 +198,21 @@ void AROXCamera::SceneCapture_ConfigComp(USceneCaptureComponent2D* SceneCaptureC
 		SceneCaptureComp->TextureTarget->TargetGamma = 0;
 		break;
 	case EROXViewMode::RVM_Mask:
-		SceneCaptureComp->CaptureSource = ESceneCaptureSource::SCS_BaseColor;
-		SceneCaptureComp->TextureTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
-		SceneCaptureComp->TextureTarget->TargetGamma = 1;
+		if (!generate_masks_changing_materials)
+		{
+			SceneCaptureComp->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+			SceneCaptureComp->TextureTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+			check(MaskMat);
+			SceneCaptureComp->PostProcessSettings.WeightedBlendables.Array.Empty();
+			SceneCaptureComp->PostProcessSettings.AddBlendable(MaskMat, 1);
+			SceneCaptureComp->PostProcessBlendWeight = 1;
+		}
+		else
+		{
+			SceneCaptureComp->CaptureSource = ESceneCaptureSource::SCS_BaseColor;
+			SceneCaptureComp->TextureTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+			SceneCaptureComp->TextureTarget->TargetGamma = 1;
+		}
 		break;
 	case EROXViewMode::RVM_Normal:
 		SceneCaptureComp->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
@@ -186,7 +246,6 @@ void AROXCamera::SceneCapture_DisableStereoComponents()
 		sc->Deactivate();
 	}
 }
-
 
 void AROXCamera::SceneCapture_ConfigStereo()
 {
@@ -291,7 +350,7 @@ void AROXCamera::SaveRTImage(USceneCaptureComponent2D* SceneCaptureComp, const E
 }
 
 
-void AROXCamera::SaveRTImageStereo(USceneCaptureComponent2D* SceneCaptureComp_R, USceneCaptureComponent2D* SceneCaptureComp_L, const EROXViewMode viewmode, FString Filename)
+void AROXCamera::SaveImageData(USceneCaptureComponent2D* SceneCaptureComp_R, USceneCaptureComponent2D* SceneCaptureComp_L, const EROXViewMode viewmode, FString Filename)
 {
 	if (GetGroundTruth)
 	{
@@ -311,32 +370,57 @@ void AROXCamera::SaveRTImageStereo(USceneCaptureComponent2D* SceneCaptureComp_R,
 	}
 }
 
+void AROXCamera::SaveAnyImage(EROXViewMode vm, FString Filename)
+{
+	uint8 i = (uint8)vm;
+	// Introduce a little delay if material must be changed
+	if (SceneManager != NULL && SceneManager->SetMaskedMaterials(vm == EROXViewMode::RVM_Mask))
+	{
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateUObject(this, &AROXCamera::SaveImageData, SceneCapture_VMs[i], SceneCapture_VMs_L[i], vm, Filename), delay_change_materials, false);
+	}
+	else
+	{
+		SaveImageData(SceneCapture_VMs[i], SceneCapture_VMs_L[i], vm, Filename);
+	}
+}
+
 void AROXCamera::SaveRGBImage(FString Filename)
 {
-	uint8 i = (uint8)EROXViewMode::RVM_RGB;
-	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_RGB, Filename);
+	SaveAnyImage(EROXViewMode::RVM_Normal, Filename);
 }
 
 void AROXCamera::SaveNormalImage(FString Filename)
 {
-	uint8 i = (uint8)EROXViewMode::RVM_Normal;
-	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Normal, Filename);
+	SaveAnyImage(EROXViewMode::RVM_Normal, Filename);
 }
 
 void AROXCamera::SaveDepthImage(FString Filename)
 {
-	uint8 i = (uint8)EROXViewMode::RVM_Depth;
-	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Depth, Filename);
+	SaveAnyImage(EROXViewMode::RVM_Depth, Filename);
 }
 
 void AROXCamera::SaveAlbedoImage(FString Filename)
 {
-	uint8 i = (uint8)EROXViewMode::RVM_Albedo;
-	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Albedo, Filename);
+	SaveAnyImage(EROXViewMode::RVM_Albedo, Filename);
 }
 
 void AROXCamera::SaveMaskImage(FString Filename)
 {
-	uint8 i = (uint8)EROXViewMode::RVM_Mask;
-	SaveRTImageStereo(SceneCapture_VMs[i], SceneCapture_VMs_L[i], EROXViewMode::RVM_Mask, Filename);
+	SaveAnyImage(EROXViewMode::RVM_Mask, Filename);
+}
+
+void AROXCamera::SaveGTImages(bool rgb, bool depth, bool mask, bool normal, bool albedo, FString Filename)
+{
+	TArray<EROXViewMode> VM_list;
+	if (rgb) VM_list.Add(EROXViewMode::RVM_RGB);
+	if (albedo) VM_list.Add(EROXViewMode::RVM_Albedo);
+	if (depth) VM_list.Add(EROXViewMode::RVM_Depth);
+	if (normal) VM_list.Add(EROXViewMode::RVM_Normal);
+	if (mask) VM_list.Add(EROXViewMode::RVM_Mask);
+
+	for (EROXViewMode vm : VM_list)
+	{
+		SaveAnyImage(vm, Filename);
+	}
 }

@@ -135,6 +135,7 @@ private:
 	void SaveRTDepthImage(USceneCaptureComponent2D* SceneCaptureComp, FString Filename);
 	void SaveAnyImage(EROXViewMode vm, FString Filename);
 
+public:
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
 	void SaveRGBImage(FString Filename = "");
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")

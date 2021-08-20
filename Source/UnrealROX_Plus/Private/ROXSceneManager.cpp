@@ -207,7 +207,8 @@ int AROXSceneManager::GetIdxFromColor(FColor color)
 		}
 	}
 
-	return idx - 1;
+	//return idx - 1;
+	return idx;
 }
 
 void AROXSceneManager::PrepareMaterials()

@@ -387,7 +387,7 @@ void AROXCamera::SaveAnyImage(EROXViewMode vm, FString Filename)
 
 void AROXCamera::SaveRGBImage(FString Filename)
 {
-	SaveAnyImage(EROXViewMode::RVM_Normal, Filename);
+	SaveAnyImage(EROXViewMode::RVM_RGB, Filename);
 }
 
 void AROXCamera::SaveNormalImage(FString Filename)

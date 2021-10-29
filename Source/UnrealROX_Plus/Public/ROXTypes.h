@@ -9,6 +9,8 @@
 #include "ROXTypes.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnrealROX, Log, All);
+DECLARE_DYNAMIC_DELEGATE_RetVal_OneParam(bool, FChangeMaterialsDelegate, const bool, bPlainColorMat);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FChangeMaterialsDelegate);
 
 UENUM(BlueprintType)
 enum class EROXViewMode : uint8

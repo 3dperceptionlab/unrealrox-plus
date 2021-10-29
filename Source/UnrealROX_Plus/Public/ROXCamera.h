@@ -8,7 +8,6 @@
 #include "Engine/SceneCapture2D.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "ROXTypes.h"
-#include "ROXSceneManager.h"
 #include "ROXCamera.generated.h"
 
 /**
@@ -20,11 +19,13 @@ class UNREALROX_PLUS_API AROXCamera : public ACameraActor
 	GENERATED_BODY()
 
 public:
-	// ROXConfig
+	UPROPERTY()
+	FChangeMaterialsDelegate OnChangeMaterialsDelegate;
 
+	// ROXConfig
 	/* Scene Manager reference. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ROX_Config)
-	AROXSceneManager* SceneManager;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ROX_Config)
+	//AROXSceneManager* SceneManager;
 
 	bool generate_masks_changing_materials;
 
@@ -119,23 +120,25 @@ protected:
 	virtual void BeginDestroy() override;
 
 private:
-	void InitSceneManager();
 	void InitComponents();
 	void InitVMActiveList();
 
-	void SceneCapture_ConfigComponents();
+	//void SceneCapture_ConfigComponents();
 	void SceneCapture_ConfigComp(USceneCaptureComponent2D* SceneCaptureComp, EROXViewMode vm, FName CompName);
 	void SceneCapture_DisableComponents();
 	void SceneCapture_DisableStereoComponents();
 	void SceneCapture_ConfigStereo();
-	void SceneCapture_ConfigStereoPair(USceneCaptureComponent2D* SCComp_R, USceneCaptureComponent2D* SCComp_L);
+	//void SceneCapture_ConfigStereoPair(USceneCaptureComponent2D* SCComp_R, USceneCaptureComponent2D* SCComp_L);
+	//void SceneCapture_UpdateConfigComponents();
 
 	void SaveImageData(USceneCaptureComponent2D* SceneCaptureComp_R, USceneCaptureComponent2D* SceneCaptureComp_L, const EROXViewMode viewmode, FString Filename);
 	void SaveRTImage(USceneCaptureComponent2D* SceneCaptureComp, const EROXViewMode viewmode, FString Filename);
-	void SaveRTDepthImage(USceneCaptureComponent2D* SceneCaptureComp, FString Filename);
+	//void SaveRTDepthImage(USceneCaptureComponent2D* SceneCaptureComp, FString Filename);
 	void SaveAnyImage(EROXViewMode vm, FString Filename);
 
 public:
+	void SceneCapture_ConfigComponents();
+
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")
 	void SaveRGBImage(FString Filename = "");
 	UFUNCTION(CallInEditor, BlueprintCallable, Category = "ROXCamera")

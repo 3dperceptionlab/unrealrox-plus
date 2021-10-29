@@ -82,6 +82,7 @@ Saved/logs/*
 !Saved/logs/.gitignore
 Screenshots
 GeneratedSequences
+AcquiredData
 
 data
 SceneText/*.txt

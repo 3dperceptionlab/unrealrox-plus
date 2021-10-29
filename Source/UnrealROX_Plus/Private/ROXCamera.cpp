@@ -28,7 +28,7 @@ AROXCamera::AROXCamera() :
 	generate_masks_changing_materials(false),
 	delay_change_materials(0.2),
 	screenshots_save_directory(),
-	screenshots_folder("GeneratedSequences"),
+	screenshots_folder("AcquiredData"),
 	generated_images_width(1920),
 	generated_images_height(1080),
 	FOV(90.0f)
@@ -76,7 +76,6 @@ void AROXCamera::BeginPlay()
 
 	// Configure SceneCapture structures
 	InitVMActiveList();
-	InitSceneManager();
 	SceneCapture_ConfigComponents();
 }
 
@@ -92,30 +91,6 @@ void AROXCamera::InitVMActiveList()
 	if (generate_depth) VMActiveList.Add(EROXViewMode::RVM_Depth);
 	if (generate_normal) VMActiveList.Add(EROXViewMode::RVM_Normal);
 	if (generate_object_mask) VMActiveList.Add(EROXViewMode::RVM_Mask);
-}
-
-void AROXCamera::InitSceneManager()
-{
-	/*for (TObjectIterator<AROXSceneManager> Itr; Itr && SceneManager == NULL; ++Itr)
-	{
-		SceneManager = *Itr;
-		generate_masks_changing_materials = SceneManager->generate_masks_changing_materials;
-		if (generate_masks_changing_materials)
-		{
-			FString status_msg = " " + ((*Itr)->GetFullName()) + " " + this->GetFullName();
-			UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *status_msg);
-		}
-	}*/
-
-	if (SceneManager == NULL)
-	{
-		FString status_msg = "No ROXSceneManager in the scene.";
-		UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *status_msg);
-	}
-	else
-	{
-		generate_masks_changing_materials = SceneManager->generate_masks_changing_materials;
-	}
 }
 
 
@@ -257,7 +232,7 @@ void AROXCamera::SceneCapture_ConfigStereo()
 void AROXCamera::SaveRTImage(USceneCaptureComponent2D* SceneCaptureComp, const EROXViewMode viewmode, FString Filename)
 {
 	FString CameraName = GetActorLabel();
-	FString FullFilename = screenshots_save_directory + screenshots_folder + "/" + CameraName + "/" + FROXTypes::GetViewmodeString(viewmode) + "/" + Filename;
+	FString FullFilename = screenshots_save_directory + screenshots_folder + "/" + GetWorld()->GetMapName() + "/" + CameraName + "/" + FROXTypes::GetViewmodeString(viewmode) + "/" + Filename;
 
 	int32 Width = SceneCaptureComp->TextureTarget->SizeX;
 	int32 Height = SceneCaptureComp->TextureTarget->SizeY;
@@ -373,15 +348,21 @@ void AROXCamera::SaveImageData(USceneCaptureComponent2D* SceneCaptureComp_R, USc
 void AROXCamera::SaveAnyImage(EROXViewMode vm, FString Filename)
 {
 	uint8 i = (uint8)vm;
-	// Introduce a little delay if material must be changed
-	if (SceneManager != NULL && SceneManager->SetMaskedMaterials(vm == EROXViewMode::RVM_Mask))
+	if (!OnChangeMaterialsDelegate.IsBound() || !OnChangeMaterialsDelegate.Execute(vm == EROXViewMode::RVM_Mask))
 	{
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateUObject(this, &AROXCamera::SaveImageData, SceneCapture_VMs[i], SceneCapture_VMs_L[i], vm, Filename), delay_change_materials, false);
+		SaveImageData(SceneCapture_VMs[i], SceneCapture_VMs_L[i], vm, Filename);
 	}
 	else
 	{
-		SaveImageData(SceneCapture_VMs[i], SceneCapture_VMs_L[i], vm, Filename);
+		// Little delay if SceneManager has to change the materials of every actor.
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateUObject(this, &AROXCamera::SaveImageData, SceneCapture_VMs[i], SceneCapture_VMs_L[i], vm, Filename), delay_change_materials, false);
+	}
+
+	if (!OnChangeMaterialsDelegate.IsBound() && vm == EROXViewMode::RVM_Mask)
+	{
+		FString status_msg = "No ROXSceneManager present in the scene. JSON with segmentations masks colors will not be stored.";
+		UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *status_msg);
 	}
 }
 

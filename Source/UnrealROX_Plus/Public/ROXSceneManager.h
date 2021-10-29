@@ -5,8 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Engine/StaticMeshActor.h"
+#include "Animation/SkeletalMeshActor.h"
+#include "Camera/CameraComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "ROXTypes.h"
 #include "ROXJsonParser.h"
+#include "ROXCamera.h"
 #include "ROXSceneManager.generated.h"
 
 UCLASS()
@@ -33,10 +38,15 @@ public:
 	FString Persistence_Level_Filter_Str;
 
 protected:
+	UWorld* LevelWorld;
+
 	// Cached properties
+	TArray<AROXCamera*> CachedCameras;
 	TArray<AStaticMeshActor*> CachedSM;
+	TArray<AStaticMeshActor*> CachedSMNonMovable;
 	TArray<bool> CachedSM_Gravity;
 	TArray<bool> CachedSM_Physics;
+	TArray<ASkeletalMeshActor*> CachedSkeletons;
 
 	TMap<AActor*, TArray<FROXMeshComponentMaterials>> MeshMaterials;
 	bool isMaskedMaterial;
@@ -58,16 +68,24 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	void CacheStaticMeshActors();
-	void CacheSceneActors(const TArray<FROXPawnInfo> &PawnsInfo, const TArray<FROXCameraConfig> &CameraConfigs);
-	void PrepareMaterials();
+	
 	FColor AssignColor(int idx_in);
 	int GetIdxFromColor(FColor color);
 
 	UFUNCTION(BlueprintCallable, Category = "ROXSceneManager")
 	void ToggleActorMaterials();
 	UFUNCTION(BlueprintCallable, Category = "ROXSceneManager")
-	bool SetMaskedMaterials(bool bPlainColorMat);
-	
+	bool SetMaskedMaterials(const bool bPlainColorMat);
+
+	UFUNCTION(BlueprintCallable, Category = "ROXSceneManager")
+	void PrepareMaskMaterials(FString MaskColorsFilename);
+	UFUNCTION(BlueprintCallable, Category = "ROXSceneManager")
+	void CacheCameras();
+	UFUNCTION(BlueprintCallable, Category = "ROXSceneManager")
+	void CacheStaticMeshActors();
+
+	UFUNCTION(BlueprintCallable, Category = "ROXSceneManager")
+	FString GetSceneInfo();
+	UFUNCTION(BlueprintCallable, Category = "ROXSceneManager")
+	FString GetFrameInfo();
 };

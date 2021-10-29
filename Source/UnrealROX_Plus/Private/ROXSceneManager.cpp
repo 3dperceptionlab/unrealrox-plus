@@ -1,17 +1,18 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "ROXSceneManager.h"
-#include "ROXCamera.h"
+#include "ROXTaskUtils.h"
 #include "Components/MeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
 AROXSceneManager::AROXSceneManager() :
 	screenshots_save_directory(),
-	screenshots_folder("GeneratedSequences"),
+	screenshots_folder("AcquiredData"),
 	Persistence_Level_Filter_Str("UEDPIE_0"),
 	isMaskedMaterial(false)
 {
@@ -33,6 +34,7 @@ AROXSceneManager::AROXSceneManager() :
 void AROXSceneManager::BeginPlay()
 {
 	Super::BeginPlay();
+	LevelWorld = GetWorld();
 
 	// Check that the last character of directories is a slash
 	if (screenshots_save_directory[screenshots_save_directory.Len() - 1] != '/')
@@ -40,16 +42,229 @@ void AROXSceneManager::BeginPlay()
 		screenshots_save_directory += "/";
 	}
 
-	//if (generate_masks_changing_materials)
-	//{
-		PrepareMaterials();
-	//}
+	CacheCameras();
+	CacheStaticMeshActors();
+	PrepareMaskMaterials("MaskColors");
+
+	UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *("Cameras: " + FString::FromInt(CachedCameras.Num())));
+	UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *("Movable: " + FString::FromInt(CachedSM.Num())));
+	UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *("NonMovable: " + FString::FromInt(CachedSMNonMovable.Num())));
 }
 
 // Called every frame
 void AROXSceneManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void AROXSceneManager::CacheCameras()
+{
+	CachedCameras.Empty();
+	for (TObjectIterator<AROXCamera> Itr; Itr; ++Itr)
+	{
+		FString fullName = Itr->GetFullName();
+		if ((LevelWorld->WorldType == EWorldType::PIE && fullName.Contains(Persistence_Level_Filter_Str)) || LevelWorld->WorldType == EWorldType::Game)
+		{
+			Itr->OnChangeMaterialsDelegate.BindDynamic(this, &AROXSceneManager::SetMaskedMaterials);
+			Itr->generate_masks_changing_materials = generate_masks_changing_materials;
+			Itr->SceneCapture_ConfigComponents();
+			CachedCameras.Add(*Itr);
+		}
+	}
+}
+
+void AROXSceneManager::CacheStaticMeshActors()
+{
+	// StaticMeshActor dump
+	CachedSM.Empty();
+	CachedSMNonMovable.Empty();
+	for (TObjectIterator<AStaticMeshActor> Itr; Itr; ++Itr)
+	{
+		FString fullName = Itr->GetFullName();
+		if ((LevelWorld->WorldType == EWorldType::PIE && fullName.Contains(Persistence_Level_Filter_Str)) || LevelWorld->WorldType == EWorldType::Game)
+		{
+			if (Itr->GetStaticMeshComponent()->Mobility == EComponentMobility::Movable)
+			{
+				CachedSM.Add(*Itr);
+			}
+			else
+			{
+				CachedSMNonMovable.Add(*Itr);
+			}			
+		}
+	}
+}
+
+FString GetOBBPointsStr(AStaticMeshActor* sm)
+{
+	FString OBBStr("");
+
+	auto mob = sm->GetStaticMeshComponent()->Mobility;
+	bool mobility_changed = false;
+
+	if (mob != EComponentMobility::Movable)
+	{
+		sm->SetMobility(EComponentMobility::Movable);
+		mobility_changed = true;
+	}
+	FVector sm_location = sm->GetActorLocation();
+	FRotator sm_rotation = sm->GetActorRotation();
+	sm->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+	sm->SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
+	FBox sm_bbox = sm->GetComponentsBoundingBox();
+	sm->SetActorLocation(sm_location);
+	sm->SetActorRotation(sm_rotation);
+	if (mobility_changed)
+	{
+		sm->SetMobility(mob);
+	}
+
+	FVector min_max_diff = sm_bbox.Max - sm_bbox.Min;
+
+	OBBStr += "OBB:" + (sm_bbox.Min + FVector(min_max_diff.X, min_max_diff.Y, 0.0f)).ToString() + " "
+		+ (sm_bbox.Max).ToString() + " "
+		+ (sm_bbox.Min + FVector(0.0f, min_max_diff.Y, min_max_diff.Z)).ToString() + " "
+		+ (sm_bbox.Min + FVector(0.0f, min_max_diff.Y, 0.0f)).ToString() + " "
+		+ (sm_bbox.Min + FVector(min_max_diff.X, 0.0f, 0.0f)).ToString() + " "
+		+ (sm_bbox.Min + FVector(min_max_diff.X, 0.0f, min_max_diff.Z)).ToString() + " "
+		+ (sm_bbox.Min + FVector(0.0f, 0.0f, min_max_diff.Z)).ToString() + " "
+		+ (sm_bbox.Min).ToString();
+
+	return OBBStr;
+}
+
+FString AROXSceneManager::GetSceneInfo()
+{
+	//Camera Info
+	FString begin_string_ = "Cameras " + FString::FromInt(CachedCameras.Num()) + "\r\n";
+	for (int i = 0; i < CachedCameras.Num(); i++)
+	{
+		AROXCamera* CameraActor = CachedCameras[i];
+		float stereo_dist(CameraActor->StereoCameraBaseline);
+		float field_of_view(CameraActor->GetCameraComponent()->FieldOfView);
+		begin_string_ += CameraActor->GetName() + " " + FString::SanitizeFloat(stereo_dist) + " " + FString::SanitizeFloat(field_of_view) + "\r\n";
+	}
+
+	// Movable StaticMeshActor dump
+	CacheStaticMeshActors();
+	FString staticdump("");
+	for (AStaticMeshActor* sm : CachedSM)
+	{
+		staticdump += sm->GetName() + " " + GetOBBPointsStr(sm) + "\r\n";
+	}
+	begin_string_ += "Objects " + FString::FromInt(CachedSM.Num()) + "\r\n" + staticdump;
+
+	// Pawns dump
+	FString skeletaldump("");
+	for (ASkeletalMeshActor* skm : CachedSkeletons)
+	{
+		//skeletaldump += skm->GetActorLabel() + " " + FString::FromInt(skm->GetSkeletalMeshComponent()->GetAllSocketNames().Num()) + "\r\n";
+	}
+	begin_string_ += "Skeletons " + FString::FromInt(CachedSkeletons.Num()) + "\r\n" + skeletaldump;
+
+	// Non-movable StaticMeshActor dump
+	FString nonmovabledump("");
+	int n_nonmovable = 0;
+	for (AStaticMeshActor* smnm : CachedSMNonMovable)
+	{
+		FString fullName = smnm->GetFullName();
+		n_nonmovable++;
+		FString actor_name_ = smnm->GetName();
+		FString actor_full_name_ = smnm->GetFullName();
+		FVector actor_location_ = smnm->GetActorLocation();
+		FRotator actor_rotation_ = smnm->GetActorRotation();
+		FBox actor_bbox = smnm->GetComponentsBoundingBox(true);
+		nonmovabledump += actor_name_ + " " + actor_location_.ToString() + " " + actor_rotation_.ToString();
+		nonmovabledump += " MIN:" + actor_bbox.Min.ToString() + " MAX:" + actor_bbox.Max.ToString();
+		nonmovabledump += " " + GetOBBPointsStr(smnm);
+		//nonmovabledump += ((bDebugMode) ? (" " + actor_full_name_ + "\r\n") : "\r\n");
+	}
+	begin_string_ += "NonMovableObjects " + FString::FromInt(n_nonmovable) + "\r\n" + nonmovabledump;
+
+
+	//(new FAutoDeleteAsyncTask<FWriteStringTask>(begin_string_, absolute_file_path))->StartBackgroundTask();
+	return begin_string_;
+}
+
+FString AROXSceneManager::GetFrameInfo()
+{
+	//GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Yellow, "Recording..");
+	//FString tick_string_ = "frame\r\n";
+	//float time_ = UGameplayStatics::GetRealTimeSeconds(LevelWorld);
+	//FString time_string_ = FString::SanitizeFloat(time_ * 1000.0f);
+	//tick_string_ += FString::FromInt(numFrame) + " " + time_string_ + "\r\n";
+	//numFrame++;
+
+	FString tick_string_("");
+
+	// Camera dump
+	FString tick_string_cam_aux_ = "";
+	int n_cameras = 0;
+	for (ACameraActor* CameraActor : CachedCameras)
+	{
+		if (IsValid(CameraActor))
+		{
+			FString camera_name_ = CameraActor->GetName();
+			FVector camera_location_ = CameraActor->GetActorLocation();
+			FRotator camera_rotation_ = CameraActor->GetActorRotation();
+
+			FString camera_string_ = camera_name_ + " " + camera_location_.ToString() + " " + camera_rotation_.ToString();
+			//FString camera_string_ = "Camera " + camera_location_.ToString() + " " + camera_rotation_.ToString();
+			//if (bDebugMode) camera_string_ += " " + CameraActor->GetFullName();
+			tick_string_cam_aux_ += camera_string_ + "\r\n";
+		}
+	}
+	//tick_string_ += "Cameras " + FString::FromInt(n_cameras) + "\r\n" + tick_string_cam_aux_;
+	tick_string_ += tick_string_cam_aux_;
+
+
+
+	FString ObjectsString("objects\r\n");
+	FString SkeletonsString("skeletons\r\n");
+
+	// We cannot assume all the pawns will have a skeleton, only those inheriting our type will
+	for (auto skm : CachedSkeletons)
+	{
+		// Same as with the Object Iterator, access the subclass instance with the * or -> operators.
+		/*TArray<FName> sckt_name = skm->GetSkeletalMeshComponent()->GetAllSocketNames();
+
+		SkeletonsString += skm->GetActorLabel() + " " + skm->GetActorLocation().ToString() + " " +
+			skm->GetActorRotation().ToString() + "\r\n";
+
+		for (FName scktnm : sckt_name)
+		{
+			FTransform sckttrans(skm->GetSkeletalMeshComponent()->GetSocketTransform(scktnm));
+			SkeletonsString += scktnm.ToString() + " " + sckttrans.GetLocation().ToString() + " " + sckttrans.Rotator().ToString() +
+				+" MIN:" + FVector::ZeroVector.ToString() + " MAX:" + FVector::ZeroVector.ToString() + "\r\n";
+		}*/
+	}
+
+	//TMap<AActor*, EROXMeshState> interaction_data = ControllerPawn->GetInteractionData();
+
+	// StaticMeshActor dump
+	for (auto Itr : CachedSM)
+	{
+		FString actor_name_ = Itr->GetName();
+		FString actor_full_name_ = Itr->GetFullName();
+		FVector actor_location_ = Itr->GetActorLocation();
+		FRotator actor_rotation_ = Itr->GetActorRotation();
+
+		FString state_str = "None";
+		//EROXMeshState* state = interaction_data.Find(Itr);
+		//if (state != nullptr)
+		//{
+		//	state_str = MeshStateToString(*state);
+		//}
+
+		ObjectsString += actor_name_ + " " + actor_location_.ToString() + " " + actor_rotation_.ToString();
+		ObjectsString += " MIN:" + Itr->GetComponentsBoundingBox(true).Min.ToString() + " MAX:" + Itr->GetComponentsBoundingBox(true).Max.ToString();
+		ObjectsString += " " + state_str + " ";
+		//ObjectsString += ((bDebugMode) ? (" " + actor_full_name_ + "\r\n") : "\r\n");
+	}
+	tick_string_ += ObjectsString + SkeletonsString;
+	//(new FAutoDeleteAsyncTask<FWriteStringTask>(tick_string_, absolute_file_path))->StartBackgroundTask();
+
+	return tick_string_;
 }
 
 /*
@@ -211,17 +426,13 @@ int AROXSceneManager::GetIdxFromColor(FColor color)
 	return idx;
 }
 
-void AROXSceneManager::PrepareMaterials()
+void AROXSceneManager::PrepareMaskMaterials(FString MaskColorsFilename)
 {
 	bool file_loaded = false;
 	TMap<FName, FROXSceneObject> SceneObjects;
-	//if (json_file_names.Num() > 0)
-	//{
-		//FString sceneObject_json_filename = screenshots_save_directory + screenshots_folder + "/" + json_file_names[CurrentJsonFile] + "/sceneObject.json";
-		FString sceneObject_json_filename = screenshots_save_directory + screenshots_folder + "/sceneObject.json";
-		SceneObjects = ROXJsonParser::LoadSceneObjects(sceneObject_json_filename);
-		file_loaded = SceneObjects.Num() > 0;
-	//}
+	FString sceneObject_json_filename = screenshots_save_directory + screenshots_folder + "/" + LevelWorld->GetMapName() + "/" + MaskColorsFilename + ".json";
+	SceneObjects = ROXJsonParser::LoadSceneObjects(sceneObject_json_filename);
+	file_loaded = SceneObjects.Num() > 0;
 
 	TArray<int> used_idxs;
 	if (file_loaded)
@@ -280,34 +491,39 @@ void AROXSceneManager::PrepareMaterials()
 				++comp_idx;
 			}
 
-			FString status_msg = ActorFullName + " " + FString::FromInt(ActorColorNum);
-			UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *status_msg);
+			//FString status_msg = ActorFullName + " " + FString::FromInt(ActorColorNum);
+			//UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *status_msg);
 
 			for (UMeshComponent* MeshComponent : Components)
 			{
+				// Computing masks with the post-process material using the stencil buffer
 				MeshComponent->bRenderCustomDepth = true;
 				MeshComponent->SetCustomDepthStencilValue(ActorColorNum);
 
 				FROXMeshComponentMaterials MaterialStruct;
 				MaterialStruct.MeshComponent = MeshComponent;
 				MaterialStruct.MaskMaterialColor = ActorColor;
-				//MaterialStruct.MaskMaterialLinearColor = FLinearColor::FromPow22Color(MaterialStruct.MaskMaterialColor);
-				MaterialStruct.MaskMaterialLinearColor = FLinearColor::FromSRGBColor(MaterialStruct.MaskMaterialColor);
-				MaterialStruct.MaskMaterial = UMaterialInstanceDynamic::Create(MaskPlainMat, this);
-				MaterialStruct.MaskMaterial->SetVectorParameterValue("MatColor", MaterialStruct.MaskMaterialLinearColor);
 
-				//UE_LOG(LogUnrealROX, Warning, TEXT("|-%s"), *(MeshComponent->GetName()));
-				//FString msg = (*Itr)->GetName() + " " + FString::FromInt(comp_idx) + " " + FString::FromInt(GetIdxFromColor(MaterialStruct.MaskMaterialColor));
-				//msg += ": R: " + FString::FromInt(MaterialStruct.MaskMaterialColor.R) + " G: " + FString::FromInt(MaterialStruct.MaskMaterialColor.G) + " B: " + FString::FromInt(MaterialStruct.MaskMaterialColor.B);
-				//UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *msg);
-
-				TArray <UMaterialInterface*> Materials = MeshComponent->GetMaterials();
-				for (UMaterialInterface* Material : Materials)
+				if (generate_masks_changing_materials)
 				{
-					if (Material != NULL)
+					//MaterialStruct.MaskMaterialLinearColor = FLinearColor::FromPow22Color(MaterialStruct.MaskMaterialColor);
+					MaterialStruct.MaskMaterialLinearColor = FLinearColor::FromSRGBColor(MaterialStruct.MaskMaterialColor);
+					MaterialStruct.MaskMaterial = UMaterialInstanceDynamic::Create(MaskPlainMat, this);
+					MaterialStruct.MaskMaterial->SetVectorParameterValue("MatColor", MaterialStruct.MaskMaterialLinearColor);
+
+					//UE_LOG(LogUnrealROX, Warning, TEXT("|-%s"), *(MeshComponent->GetName()));
+					//FString msg = (*Itr)->GetName() + " " + FString::FromInt(comp_idx) + " " + FString::FromInt(GetIdxFromColor(MaterialStruct.MaskMaterialColor));
+					//msg += ": R: " + FString::FromInt(MaterialStruct.MaskMaterialColor.R) + " G: " + FString::FromInt(MaterialStruct.MaskMaterialColor.G) + " B: " + FString::FromInt(MaterialStruct.MaskMaterialColor.B);
+					//UE_LOG(LogUnrealROX, Warning, TEXT("%s"), *msg);
+
+					TArray <UMaterialInterface*> Materials = MeshComponent->GetMaterials();
+					for (UMaterialInterface* Material : Materials)
 					{
-						MaterialStruct.DefaultMaterials.Add(Material);
-						//UE_LOG(LogUnrealROX, Warning, TEXT("__|-%s"), *(Material->GetName()));
+						if (Material != NULL)
+						{
+							MaterialStruct.DefaultMaterials.Add(Material);
+							//UE_LOG(LogUnrealROX, Warning, TEXT("__|-%s"), *(Material->GetName()));
+						}
 					}
 				}
 
@@ -317,12 +533,7 @@ void AROXSceneManager::PrepareMaterials()
 			MeshMaterials.Add(*Itr, ComponentMaterials);
 		}
 	}
-
-	//if (json_file_names.Num() < 1)
-	//{
-		//FString sceneObject_json_filename = screenshots_save_directory + screenshots_folder + "/sceneObject.json";
-		ROXJsonParser::WriteSceneObjects(MeshMaterials, sceneObject_json_filename);
-	//}
+	ROXJsonParser::WriteSceneObjects(MeshMaterials, sceneObject_json_filename);
 }
 
 void AROXSceneManager::ToggleActorMaterials()
@@ -353,7 +564,7 @@ void AROXSceneManager::ToggleActorMaterials()
 	}
 }
 
-bool AROXSceneManager::SetMaskedMaterials(bool bPlainColorMat)
+bool AROXSceneManager::SetMaskedMaterials(const bool bPlainColorMat)
 {
 	bool isMaterialChanged = false;
 	if (isMaskedMaterial != bPlainColorMat)
@@ -362,58 +573,4 @@ bool AROXSceneManager::SetMaskedMaterials(bool bPlainColorMat)
 		isMaterialChanged = true;
 	}
 	return isMaterialChanged;
-}
-
-
-void AROXSceneManager::CacheStaticMeshActors()
-{
-	// StaticMeshActor dump
-	CachedSM.Empty();
-	for (TObjectIterator<AStaticMeshActor> Itr; Itr; ++Itr)
-	{
-		FString fullName = Itr->GetFullName();
-		/*if ((fullName.Contains(Persistence_Level_Filter_Str) || bStandaloneMode || bDebugMode) && Itr->GetStaticMeshComponent()->Mobility == EComponentMobility::Movable)
-		{
-			CachedSM.Add(*Itr);
-		}*/
-	}
-}
-
-
-void AROXSceneManager::CacheSceneActors(const TArray<FROXPawnInfo> &PawnsInfo, const TArray<FROXCameraConfig> &CameraConfigs)
-{
-	// StaticMeshActor dump
-	/*CacheStaticMeshActors();
-
-	// Cameras dump
-	CameraActors.Empty();
-	StereoCameraBaselines.Empty();
-	SceneCapture_Depth.Empty();
-	SceneCapture_Lit.Empty();
-	SceneCapture_Normal.Empty();
-	SceneCapture_Mask.Empty();
-
-	DefaultSceneCapture = SpawnSceneCapture("DefaultSceneCapture", 90);
-	SetViewmodeSceneCapture(DefaultSceneCapture, EROXViewMode::RVM_Lit);*/
-
-	/*for (TActorIterator <ACameraActor> ActorItr(GetWorld()); ActorItr; ++ActorItr)
-	{
-		ActorItr->DetachFromActor(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
-		ActorItr->Destroy();
-	}*/
-	/*bool check_camera = (json_file_names.Num() == cameras_to_rebuild.Num()) && (cameras_to_rebuild[CurrentJsonFile].Len() == CameraConfigs.Num());
-	for (int i = 0; i < CameraConfigs.Num(); ++i)
-	{
-		if (!check_camera || cameras_to_rebuild[CurrentJsonFile][i] == '1')
-		{
-			SpawnCamerasPlayback(CameraConfigs[i], 0);
-
-			// Stereo
-			if (CameraConfigs[i].StereoBaseline > 0.0)
-			{
-				SpawnCamerasPlayback(CameraConfigs[i], -1);
-				SpawnCamerasPlayback(CameraConfigs[i], 1);
-			}
-		}
-	}*/
 }

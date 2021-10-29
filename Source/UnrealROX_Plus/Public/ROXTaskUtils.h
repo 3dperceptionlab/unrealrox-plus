@@ -17,15 +17,6 @@ public:
 	~ROXTaskUtils();
 };
 
-/*class FROXUtils
-{
-public:
-	static FString GetDateTimeString()
-	{
-		return 	FDateTime::Now().ToString(TEXT("%Y%m%d%-%H%M%S"));
-	}
-};*/
-
 
 /*****************************************************************************
 * FROXWriteStringTask: 
